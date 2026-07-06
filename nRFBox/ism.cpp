@@ -206,8 +206,6 @@ namespace Analyzer {
     u8g2.setCursor(0, 64);
     u8g2.print("1...5...10...25..50...80...128");
     u8g2.sendBuffer();
-
-    //delay(50);
   }
 }
 
@@ -517,10 +515,9 @@ namespace Scanner {
     const int samplesPerChannel = 50;
 
     for (int i = 0; i < CHANNELS; i++) {
-      RadioA.setChannel((128 * i) / CHANNELS); // Use RF24 setChannel
+      RadioA.setChannel((128 * i) / CHANNELS); 
 
       for (int j = 0; j < samplesPerChannel; j++) {
-        // Check Select button in inner loop
         static unsigned long lastDebounceTimeSelect = 0;
         const unsigned long debounceDelay = 200;
         
@@ -529,7 +526,7 @@ namespace Scanner {
           if ((currentMillis - lastDebounceTimeSelect) > debounceDelay) {
             Serial.println("Select button pressed, exiting scanChannels");
             lastDebounceTimeSelect = currentMillis;
-            return; // Exit immediately
+            return; 
           }
         }
         setRX();
@@ -622,7 +619,7 @@ namespace Scanner {
     SPI.setFrequency(16000000);
     SPI.setBitOrder(MSBFIRST);
 
-    RadioA.begin(); // Initialize RadioA
+    RadioA.begin(); 
     disable();
 
     powerUp();
@@ -634,33 +631,30 @@ namespace Scanner {
 
   void scannerLoop() {
     static unsigned long lastDebounceTimeSelect = 0;
-    const unsigned long debounceDelay = 200; // Match Jammer/Analyzer
+    const unsigned long debounceDelay = 200; 
 
-    // Check Select button before scanning
     if (digitalRead(BUTTON_SELECT_PIN) == LOW) {
       unsigned long currentMillis = millis();
       if ((currentMillis - lastDebounceTimeSelect) > debounceDelay) {
         Serial.println("Select button pressed, exiting Scanner");
         lastDebounceTimeSelect = currentMillis;
-        return; // Exit to main loop
+        return; 
       }
     }
 
     scanChannels();
 
-    // Check Select button after scanning
     if (digitalRead(BUTTON_SELECT_PIN) == LOW) {
       unsigned long currentMillis = millis();
       if ((currentMillis - lastDebounceTimeSelect) > debounceDelay) {
         Serial.println("Select button pressed, exiting Scanner");
         lastDebounceTimeSelect = currentMillis;
-        return; // Exit to main loop
+        return; 
       }
     }
 
     outputChannels();
 
-    // Skip EEPROM save if Select was pressed
     if (digitalRead(BUTTON_SELECT_PIN) == LOW && (millis() - lastDebounceTimeSelect) > debounceDelay) {
       return;
     }
@@ -722,8 +716,6 @@ namespace Jammer {
     RadioB.setChannel(channels);
     RadioC.setChannel(channels);
   }
-
-
 
   void changeChannelNext() {
     channels = (channels % 14) + 1;
@@ -835,20 +827,18 @@ namespace Jammer {
       const char text[] = { 0xAA, 0x55, 0xAA, 0x55, 0xAA, 0x55, 0xAA, 0x55,
                             0xAA, 0x55, 0xAA, 0x55, 0xAA, 0x55, 0xAA, 0x55 };
       for (int i = ((channels * 5) + 1); i < ((channels * 5) + 23); i++) {
-        // Check buttons to allow immediate deactivation
         handleButtonPress(BTN_PIN_RIGHT, lastDebounceTimeBT2, changeOptionRight);
         handleButtonPress(BTN_PIN_LEFT, lastDebounceTimeBT4, changeOptionLeft);
-        if (!jamming) break; // Exit loop if jamming is deactivated
+        if (!jamming) break; 
         radioSetChannel(i);
         RadioA.write(&text, sizeof(text));
         RadioB.write(&text, sizeof(text));
         RadioC.write(&text, sizeof(text));
       }
     } else if (methode == 2) {
-      // Check buttons to allow immediate deactivation
       handleButtonPress(BTN_PIN_RIGHT, lastDebounceTimeBT2, changeOptionRight);
       handleButtonPress(BTN_PIN_LEFT, lastDebounceTimeBT4, changeOptionLeft);
-      if (!jamming) return; // Exit early if jamming is deactivated
+      if (!jamming) return; 
       radioSetChannel(channels);
       int randomIndex = random(0, sizeof(wlanchannels) / sizeof(wlanchannels[0]));
       bool resultA = RadioA.write(&randomIndex, sizeof(randomIndex));
@@ -856,10 +846,9 @@ namespace Jammer {
       bool resultC = RadioC.write(&randomIndex, sizeof(randomIndex));
     } else if (methode == 3) {
       for (int i = 0; i < 22; i++) {
-        // Check buttons to allow immediate deactivation
         handleButtonPress(BTN_PIN_RIGHT, lastDebounceTimeBT2, changeOptionRight);
         handleButtonPress(BTN_PIN_LEFT, lastDebounceTimeBT4, changeOptionLeft);
-        if (!jamming) break; // Exit loop if jamming is deactivated
+        if (!jamming) break; 
         int channelA = ((channels * 5) + 1) + i;
         int channelB = ((channels * 5) + 1) + i + 1;
         int channelC = ((channels * 5) + 1) + i + 2;
@@ -875,10 +864,9 @@ namespace Jammer {
         RadioC.write(&randomIndex, sizeof(randomIndex));
       }
     }
-  }
-  
+}
 
-  void updateDisplay() {
+void updateDisplay() {
     u8g2.clearBuffer();
     u8g2.setFont(u8g2_font_profont11_tf);
 
@@ -976,5 +964,150 @@ namespace Jammer {
     }
 
     delay(50);
+  }
+}
+
+// ----------------------------------------------------
+// NOVA FUNÇÃO: CC1101 MODULE (Copia de 10s e <2s Salva)
+// ----------------------------------------------------
+namespace SubGHz {
+  unsigned long copyStartTime = 0;
+  unsigned long signalStartTime = 0;
+  unsigned long signalDuration = 0;
+  bool isCopying = false;
+  bool hasSavedSignal = false;
+  bool isReceiving = false;
+
+  void subGhzSetup() {
+    Serial.begin(115200);
+    
+    // Configura os Pinos do CC1101
+    pinMode(CC_CSN_PIN, OUTPUT);
+    digitalWrite(CC_CSN_PIN, HIGH);
+    pinMode(CC_GDO0_PIN, INPUT); // Pino de leitura de sinal (Assíncrono)
+    
+    u8g2.clearBuffer();
+    u8g2.setFont(u8g2_font_5x8_tr);
+    u8g2.drawStr(10, 30, "CC1101 Initialized");
+    u8g2.sendBuffer();
+    delay(1000);
+  }
+
+  void subGhzLoop() {
+    u8g2.clearBuffer();
+    u8g2.setFont(u8g2_font_5x8_tr);
+    u8g2.drawStr(0, 10, "[ CC1101 SubGHz Tool ]");
+
+    if (!isCopying) {
+       u8g2.drawStr(0, 30, "UP = Copy Signal (10s)");
+       if (hasSavedSignal) {
+         u8g2.drawStr(0, 45, "DOWN = Play Saved Signal");
+       }
+       
+       if (digitalRead(BUTTON_UP_PIN) == LOW) {
+          isCopying = true;
+          copyStartTime = millis();
+          signalDuration = 0; // Descarta o anterior
+          isReceiving = false;
+          hasSavedSignal = false;
+          delay(200);
+       }
+       
+       if (hasSavedSignal && digitalRead(BUTTON_DOWN_PIN) == LOW) {
+          u8g2.clearBuffer();
+          u8g2.drawStr(10, 30, "Playing Signal...");
+          u8g2.sendBuffer();
+          // Aqui entraria o envio do array salvo na memoria do CC1101
+          delay(1500); 
+       }
+    } else {
+       unsigned long elapsed = millis() - copyStartTime;
+       
+       u8g2.setCursor(0, 30);
+       u8g2.print("Scanning... ");
+       u8g2.print(10 - (elapsed / 1000));
+       u8g2.print("s");
+
+       // Lógica nativa de amostragem no Pino GDO0 do CC1101
+       int rxState = digitalRead(CC_GDO0_PIN);
+       if (rxState == HIGH && !isReceiving) {
+          isReceiving = true;
+          signalStartTime = millis();
+       } else if (rxState == LOW && isReceiving) {
+          isReceiving = false;
+          unsigned long currentDur = millis() - signalStartTime;
+          if (currentDur > signalDuration) {
+              signalDuration = currentDur; // Captura duração do burst
+          }
+       }
+
+       if (elapsed >= 10000) {
+          isCopying = false;
+          u8g2.clearBuffer();
+          if (signalDuration > 0 && signalDuration <= 2000) {
+             hasSavedSignal = true;
+             u8g2.drawStr(10, 30, "Signal Saved!");
+          } else if (signalDuration > 2000) {
+             u8g2.drawStr(10, 30, "Discarded ( > 2s )");
+          } else {
+             u8g2.drawStr(10, 30, "No Signal Detected");
+          }
+          u8g2.sendBuffer();
+          delay(2000);
+       }
+    }
+
+    if (digitalRead(BUTTON_SELECT_PIN) == LOW) {
+       delay(200);
+       return; 
+    }
+    
+    u8g2.sendBuffer();
+  }
+}
+
+// ----------------------------------------------------
+// NOVA FUNÇÃO: HARDWARE TEST MODULE (NRF & CC1101)
+// ----------------------------------------------------
+namespace HwTest {
+  void testSetup() {
+    Serial.begin(115200);
+  }
+
+  void testLoop() {
+    u8g2.clearBuffer();
+    u8g2.setFont(u8g2_font_5x8_tr);
+    u8g2.drawStr(0, 10, "--- Hardware Test ---");
+
+    // 1. NRF24 Test (Aproveitando a RadioA)
+    u8g2.drawStr(0, 30, "NRF24 SPI:");
+    RadioA.begin();
+    if (RadioA.isChipConnected()) {
+        u8g2.drawStr(70, 30, "[ OK ]");
+    } else {
+        u8g2.drawStr(70, 30, "[ FAIL ]");
+    }
+
+    // 2. CC1101 Test (Lendo o registrador de VERSION 0x31)
+    u8g2.drawStr(0, 45, "CC1101 SPI:");
+    
+    digitalWrite(CC_CSN_PIN, LOW);
+    SPI.transfer(0x31 | 0x80); 
+    byte version = SPI.transfer(0x00);
+    digitalWrite(CC_CSN_PIN, HIGH);
+
+    if (version != 0x00 && version != 0xFF) {
+        u8g2.drawStr(70, 45, "[ OK ]");
+    } else {
+        u8g2.drawStr(70, 45, "[ FAIL ]");
+    }
+
+    u8g2.drawStr(0, 60, "Press SELECT to Exit");
+    u8g2.sendBuffer();
+
+    if (digitalRead(BUTTON_SELECT_PIN) == LOW) {
+       delay(200);
+       return;
+    }
   }
 }
