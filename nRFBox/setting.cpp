@@ -286,4 +286,4 @@ void settingLoop() {
   handleButtons();
   displayMenu();
   }
-} 
+}
