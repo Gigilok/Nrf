@@ -9,24 +9,36 @@
 #define SCREEN_WIDTH 128
 #define SCREEN_HEIGHT 64
 
-// Push Buttons-specific Pins
-#define BUTTON_UP_PIN       26 
-#define BUTTON_SELECT_PIN   33
-#define BUTTON_DOWN_PIN     32 
-#define BTN_PIN_RIGHT       27
-#define BTN_PIN_LEFT        25
+// Push Buttons-specific Pins (Atualizado conforme sua lista)
+#define BUTTON_UP_PIN       17 // Botão 1 Cima (Cinza)
+#define BUTTON_DOWN_PIN     14 // Botão 2 Baixo (Vermelho)
+#define BUTTON_SELECT_PIN   32 // Botão 3 Select (Marrom)
+#define BTN_PIN_RIGHT       33 // Botão 4 (Preto)
+#define BTN_PIN_LEFT        21 // Pino dummy para manter retrocompatibilidade com menus
 
 // SD Card Slot-specific Pins
 #define SD_CS_PIN 5
 #define FIRMWARE_FILE "/firmware.bin"
 
-// nRF24-specific Pins
-#define NRF_CE_PIN_A    5   
-#define NRF_CSN_PIN_A   17 
-#define NRF_CE_PIN_B    16  
-#define NRF_CSN_PIN_B   4  
-#define NRF_CE_PIN_C    15  
-#define NRF_CSN_PIN_C   2  
+// nRF24-specific Pins (Atualizado)
+#define NRF_CE_PIN_A    25 // Amarelo
+#define NRF_CSN_PIN_A   26 // Azul
+
+// Pinos falsos para os rádios B e C para não quebrar a lógica do "ProtoKill"
+#define NRF_CE_PIN_B    22  
+#define NRF_CSN_PIN_B   13  
+#define NRF_CE_PIN_C    12  
+#define NRF_CSN_PIN_C   15  
+
+// CC1101-specific Pins (Novos pinos)
+#define CC_CSN_PIN      27 // Roxo
+#define CC_GDO0_PIN     4  // Azul
+#define CC_GDO2_PIN     16 // Laranja
+
+// SPI Pins Compartilhados 
+#define SPI_SCK         18 // SCK NRF (Verde) / SCK CC1101 (Amarelo)
+#define SPI_MISO        19 // MI NRF (Cinza) / MISO CC1101 (Vermelho)
+#define SPI_MOSI        23 // MO NRF (Roxo) / MOSI CC1101 (Verde)
 
 // Common dependencies
 #include "setting.h"
@@ -112,6 +124,18 @@ namespace Scanner {
 namespace Jammer {
   void jammerSetup();
   void jammerLoop();
+}
+
+// CC1101-related namespaces (NOVO)
+namespace SubGHz {
+  void subGhzSetup();
+  void subGhzLoop();
+}
+
+// Hardware Test namespace (NOVO)
+namespace HwTest {
+  void testSetup();
+  void testLoop();
 }
 
 // WiFi-related namespaces
