@@ -1,0 +1,41 @@
+name: Build ESP32 nRFBox Firmware
+
+on:
+  push:
+    branches: [ "principal", "main", "master" ]
+  pull_request:
+    branches: [ "principal", "main", "master" ]
+  workflow_dispatch: # Permite rodar a compilação manualmente no GitHub
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    - name: Install PlatformIO
+      run: |
+        python -m pip install --upgrade pip
+        pip install platformio
+
+    - name: Build Firmware with PlatformIO
+      run: pio run -e esp32dev
+
+    - name: Extract and Upload BIN files
+      uses: actions/upload-artifact@v4
+      with:
+        name: nRFBox-ESP32-Binaries
+        path: |
+          .pio/build/esp32dev/firmware.bin
+          .pio/build/esp32dev/partitions.bin
+          .pio/build/esp32dev/bootloader.bin
+        # O PlatformIO gera automaticamente esses 3 arquivos principais para o ESP32.
+        # Eles são suficientes para flashear a ESP32 por ferramentas como o Flash Download Tools.
+
