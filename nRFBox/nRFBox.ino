@@ -9,34 +9,54 @@
 
 extern uint8_t oledBrightness;
 
-const int NUM_ITEMS = 12;
+// Aumentado para suportar os 2 novos itens
+const int NUM_ITEMS = 14; 
 const int MAX_ITEM_LENGTH = 20;
 
+// Novos Ícones Criados via PROGMEM Array para CC1101 Radio e Hw Test
+const unsigned char bitmap_icon_radio[] = {
+  0x00, 0x00, 0xe0, 0x07, 0x10, 0x08, 0x08, 0x10, 0xe4, 0x27, 0x12, 0x48,
+  0x0a, 0x50, 0x09, 0x90, 0x09, 0x90, 0x0a, 0x50, 0x12, 0x48, 0xe4, 0x27,
+  0x08, 0x10, 0x10, 0x08, 0xe0, 0x07, 0x00, 0x00
+};
+
+const unsigned char bitmap_icon_test[] = {
+  0x00, 0x00, 0xf8, 0x1f, 0x08, 0x10, 0x08, 0x10, 0x88, 0x10, 0x48, 0x12,
+  0x28, 0x14, 0x18, 0x18, 0x18, 0x18, 0x28, 0x14, 0x48, 0x12, 0x88, 0x10,
+  0x08, 0x10, 0x08, 0x10, 0xf8, 0x1f, 0x00, 0x00
+};
+
+// Ícones totais mapeados
 const unsigned char* bitmap_icons[NUM_ITEMS] = {
   bitmap_icon_scanner, bitmap_icon_analyzer, bitmap_icon_jammer, bitmap_icon_kill,
   bitmap_icon_ble_jammer, bitmap_icon_spoofer, bitmap_icon_apple, bitmap_icon_ble,
   bitmap_icon_wifi, bitmap_icon_wifi_jammer, bitmap_icon_about, 
-  bitmap_icon_setting
+  bitmap_icon_setting, 
+  bitmap_icon_radio, // Novo CC1101
+  bitmap_icon_test   // Novo Hardware Test
 };
 
 char menu_items[NUM_ITEMS][MAX_ITEM_LENGTH] = {  
   "Scanner", "Analyzer", "WLAN Jammer", "Proto Kill", "BLE Jammer",
   "BLE Spoofer", "Sour Apple", "BLE Scan", "WiFi Scan", 
-  "Deauther", "About", "Setting"
+  "Deauther", "About", "Setting",
+  "CC1101 Radio", "Test Modules"
 };
 
 void (*menu_functions[NUM_ITEMS])() = {
   Scanner::scannerSetup, Analyzer::analyzerSetup, Jammer::jammerSetup,
   ProtoKill::blackoutSetup, BleJammer::blejammerSetup, Spoofer::spooferSetup,
   SourApple::sourappleSetup, BleScan::blescanSetup, WifiScan::wifiscanSetup, Deauther::deautherSetup,
-  utils, Setting::settingSetup
+  utils, Setting::settingSetup,
+  SubGHz::subGhzSetup, HwTest::testSetup // Adicionando as funções de Setup
 };
 
 void (*menu_loop_functions[NUM_ITEMS])() = {
   Scanner::scannerLoop, Analyzer::analyzerLoop, Jammer::jammerLoop,
   ProtoKill::blackoutLoop, BleJammer::blejammerLoop, Spoofer::spooferLoop,
   SourApple::sourappleLoop, BleScan::blescanLoop, WifiScan::wifiscanLoop, Deauther::deautherLoop,
-  nullptr, Setting::settingLoop
+  nullptr, Setting::settingLoop,
+  SubGHz::subGhzLoop, HwTest::testLoop   // Adicionando as funções de Loop
 };
 
 int item_selected = 0;
@@ -72,7 +92,7 @@ void drawMenu() {
 
   int selected_col = item_selected % icons_per_row;
   int selected_row = (item_selected / icons_per_row) % icons_per_col;
-  if (item_selected == 12) {
+  if (item_selected >= 12) {
     selected_row = 1; 
   }
   int highlight_x = 13 + selected_col * 40;
@@ -131,6 +151,13 @@ bool readButton(int pin) {
 
 void setup() {
   Serial.begin(115200);
+  
+  // Garantir que os CS dos rádios se iniciem em HIGH no SPI
+  pinMode(CC_CSN_PIN, OUTPUT);
+  digitalWrite(CC_CSN_PIN, HIGH);
+  pinMode(NRF_CSN_PIN_A, OUTPUT);
+  digitalWrite(NRF_CSN_PIN_A, HIGH);
+
   neopixelSetup();
   initAllRadios();
   EEPROM.begin(512);
@@ -138,11 +165,14 @@ void setup() {
   u8g2.begin();
   u8g2.setContrast(oledBrightness);
   conf();
+  
+  // Novos pinos atualizados
   pinMode(BUTTON_UP_PIN, INPUT_PULLUP);
   pinMode(BUTTON_SELECT_PIN, INPUT_PULLUP);
   pinMode(BUTTON_DOWN_PIN, INPUT_PULLUP);
   pinMode(BTN_PIN_RIGHT, INPUT_PULLUP);
   pinMode(BTN_PIN_LEFT, INPUT_PULLUP);
+  
   drawMenu();
 }
 
