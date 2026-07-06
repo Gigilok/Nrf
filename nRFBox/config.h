@@ -81,8 +81,8 @@ Adafruit_NeoPixel pixels(1, 14, NEO_GRB + NEO_KHZ800);
 #include <esp_wifi.h>
 
 // External declarations
-extern U8G2_SSD1306_128X64_NONAME_F_HW_I2C u8g2;
-extern Adafruit_NeoPixel pixels;
+extern bool neoPixelActive;
+extern uint8_t oledBrightness;
 
 // BLE-related namespaces
 namespace BleJammer {
