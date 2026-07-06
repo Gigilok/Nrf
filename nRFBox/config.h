@@ -14,7 +14,7 @@
 #define BUTTON_DOWN_PIN     14 // Botão 2 Baixo (Vermelho)
 #define BUTTON_SELECT_PIN   32 // Botão 3 Select (Marrom)
 #define BTN_PIN_RIGHT       33 // Botão 4 (Preto)
-#define BTN_PIN_LEFT        21 // Pino dummy para manter retrocompatibilidade com menus
+#define BTN_PIN_LEFT        2 // Pino dummy para manter retrocompatibilidade com menus
 
 // SD Card Slot-specific Pins
 #define SD_CS_PIN 5
